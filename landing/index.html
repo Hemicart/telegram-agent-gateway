@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Telegram Agent Gateway — Self-host setup</title>
+  <meta name="description" content="Open-source personal gateway between your Telegram account and your AI agent. You host it, you pay for it, your session stays on your instance." />
+  <meta name="color-scheme" content="light dark" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..700&amp;family=Geist:wght@400;500&amp;family=Geist+Mono:wght@400&amp;family=Work+Sans:wght@400;500&amp;display=swap" />
+  <style>
+    /* Essence, adapted for a public page.
+       5 unit, 15 baseline. Paper is the reading surface; the ink floor rises to hold actions.
+       Round where you touch (pills, chips, the floor's edge), square where you read (plates, rows, code).
+       Work Sans for every number and label, Archivo (condensed, caps) for the one display word, Geist for sentences.
+       Red is used once: the one thing you must not do. */
+
+    :root {
+      --paper: #FFFFFF; --ink: #000000; --ink2: #707070; --ink3: #939393;
+      --hair: #E5E5E5; --fill: #F2F2F2; --red: #E10600;
+
+      --face-truth: "Work Sans", "Helvetica Neue", Arial, sans-serif;
+      --face-display: "Archivo", "Arial Narrow", sans-serif;
+      --face-explain: "Geist", "Helvetica Neue", Arial, sans-serif;
+      --face-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+      --u: 5px; --line: 15px;
+      --margin: 15px;
+      --gap-group: 30px; --gap-section: 45px;
+      --row: 45px; --pill: 50px; --chip: 30px; --pill-gap: 5px;
+      --radius-round: 999px; --page-corner: 30px;
+      --snap: 120ms; --ease: cubic-bezier(0.2, 0, 0, 1);
+      --measure: 1110px;
+    }
+    /* the other ground: what the floor carries (inverts with the scheme) */
+    .floor {
+      --paper: #000000; --ink: #FFFFFF; --ink2: #8F8F8F; --ink3: #5E5E5E;
+      --hair: #262626; --fill: #141414; --red: #FF3B2F;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --paper: #000000; --ink: #FFFFFF; --ink2: #8F8F8F; --ink3: #5E5E5E;
+        --hair: #262626; --fill: #141414; --red: #FF3B2F;
+      }
+      .floor {
+        --paper: #FFFFFF; --ink: #000000; --ink2: #707070; --ink3: #939393;
+        --hair: #E5E5E5; --fill: #F2F2F2; --red: #E10600;
+      }
+    }
+    @media (min-width: 720px) { :root { --margin: 30px; } }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--face-explain);
+      font-size: 15px; line-height: 25px;
+      -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+    }
+    h1, h2, h3, p, ul, ol, pre, figure { margin: 0; padding: 0; }
+    ul, ol { list-style: none; }
+    p { text-wrap: pretty; }
+    a { color: inherit; }
+    :focus-visible { outline: 1px solid var(--ink); outline-offset: 2px; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition-duration: 0.001ms !important; } }
+
+    /* ---------- type roles ---------- */
+    .caps, .label {
+      font-family: var(--face-truth);
+      font-size: 11px; line-height: 15px; letter-spacing: 0.04em;
+      text-transform: uppercase; font-feature-settings: "tnum" 1, "lnum" 1;
+    }
+    .label { color: var(--ink2); }
+    .sentence { font-size: 13px; line-height: 20px; }
+    .muted { color: var(--ink2); }
+    code, pre, .mono { font-family: var(--face-mono); }
+    code { font-size: 0.87em; background: var(--fill); padding: 1px 4px; overflow-wrap: anywhere; }
+    .act {
+      text-decoration-line: underline; text-decoration-thickness: 1px; text-underline-offset: 4px;
+      transition: color var(--snap) var(--ease);
+    }
+    .act:hover { color: var(--ink2); }
+    .act:active { color: var(--ink2); transition-duration: 0ms; }
+
+    .wrap { width: 100%; max-width: calc(var(--measure) + 2 * var(--margin)); margin: 0 auto; padding: 0 var(--margin); }
+
+    /* ---------- header row: 45 ---------- */
+    header.top {
+      position: sticky; top: 0; z-index: 10;
+      background: var(--paper);
+      box-shadow: inset 0 -1px 0 var(--hair);
+    }
+    header.top .wrap { display: flex; align-items: center; justify-content: space-between; height: var(--row); gap: 15px; }
+    header.top .mark { font-family: var(--face-truth); text-decoration: none; white-space: nowrap; }
+    header.top nav { display: flex; gap: 30px; }
+    header.top nav a { white-space: nowrap; position: relative; }
+    header.top nav a::after { content: ""; position: absolute; inset: -15px -10px; }
+    @media (max-width: 539px) { header.top nav .wide { display: none; } }
+
+    /* ---------- pills ---------- */
+    .btn {
+      position: relative;
+      display: inline-flex; align-items: center; justify-content: center;
+      height: var(--pill); padding: 0 var(--margin); min-width: 0;
+      border: 0; border-radius: var(--radius-round);
+      font-family: var(--face-truth); font-size: 11px; line-height: 15px;
+      letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
+      text-decoration: none; cursor: pointer;
+      background: transparent; color: var(--ink);
+      box-shadow: inset 0 0 0 1px var(--ink);
+      transition: background-color var(--snap) var(--ease), color var(--snap) var(--ease);
+    }
+    @media (max-width: 719px) { .btn { padding: 0 15px; } }
+    .btn.primary { background: var(--ink); color: var(--paper); box-shadow: none; }
+    .btn:active { transition-duration: 0ms; background: var(--fill); }
+    .btn.primary:active { background: var(--ink3); }
+    .btn.chip { height: var(--chip); padding: 0 10px; }
+    .btn.chip::after { content: ""; position: absolute; inset: -7.5px 0; }
+    .row { display: flex; flex-wrap: wrap; gap: var(--pill-gap); }
+
+    /* ---------- hero ---------- */
+    .hero { padding: 60px 0 var(--gap-section); }
+    .display {
+      font-family: var(--face-display); font-weight: 600; font-stretch: 72%;
+      font-variation-settings: "wdth" 72;
+      text-transform: uppercase; letter-spacing: -0.01em;
+      font-size: 45px; line-height: 40px;
+      margin-left: -0.029em;
+    }
+    @media (min-width: 640px) { .display { font-size: 90px; line-height: 80px; } }
+    @media (min-width: 1000px) { .display { font-size: 120px; line-height: 105px; letter-spacing: -0.012em; } }
+    .hero .tags { display: flex; flex-wrap: wrap; gap: 5px 30px; margin-bottom: 30px; }
+    .hero-grid { display: grid; gap: var(--gap-group); margin-top: var(--gap-group); }
+    @media (min-width: 900px) {
+      .hero-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 60px; margin-top: 60px; align-items: start; }
+    }
+    .lede { font-size: 20px; line-height: 25px; letter-spacing: -0.01em; max-width: 520px; }
+    .lede + .row { margin-top: 30px; }
+
+    /* ledger: rows of 45, a rule in ink on top, hairlines between */
+    .ledger { box-shadow: inset 0 1px 0 var(--ink); }
+    .ledger > div {
+      display: grid; grid-template-columns: 105px minmax(0, 1fr); gap: 15px;
+      padding: 15px 0 14px; box-shadow: inset 0 -1px 0 var(--hair);
+    }
+    .ledger dt, .ledger dd { margin: 0; }
+    .ledger dd { font-size: 13px; line-height: 20px; margin-top: -2.5px; }
+    .ledger dl { margin: 0; }
+
+    /* ---------- sections ---------- */
+    section.block { padding: var(--gap-section) 0; }
+    .head {
+      display: flex; justify-content: space-between; gap: 15px;
+      padding-top: 15px; box-shadow: inset 0 1px 0 var(--ink);
+      margin-bottom: var(--gap-group);
+    }
+    h2.subject {
+      font-family: var(--face-truth); font-weight: 400;
+      font-size: 30px; line-height: 30px; letter-spacing: -0.03em;
+      max-width: 690px; margin-bottom: var(--gap-group);
+    }
+    @media (min-width: 720px) { h2.subject { font-size: 45px; line-height: 45px; letter-spacing: -0.035em; } }
+
+    /* four facts: square, on hairlines */
+    .facts { display: grid; gap: 0 var(--gap-group); }
+    @media (min-width: 720px) { .facts { grid-template-columns: 1fr 1fr; } }
+    .facts > div { padding: 15px 0 30px; box-shadow: inset 0 1px 0 var(--hair); }
+    .facts h3 { font-family: var(--face-truth); font-weight: 400; font-size: 15px; line-height: 20px; letter-spacing: -0.01em; margin: 5px 0 10px; }
+    .facts p { font-size: 13px; line-height: 20px; color: var(--ink2); max-width: 440px; }
+
+    pre.plate {
+      background: var(--fill); color: var(--ink);
+      font-size: 13px; line-height: 20px; padding: 15px;
+      overflow-x: auto; white-space: pre; margin-top: 15px;
+    }
+
+    /* ---------- steps ---------- */
+    .steps-layout { display: grid; gap: var(--gap-group); }
+    @media (min-width: 1000px) {
+      .steps-layout { grid-template-columns: 240px minmax(0, 1fr); gap: 60px; }
+    }
+    .index { display: none; }
+    @media (min-width: 1000px) {
+      .index { display: block; position: sticky; top: 75px; align-self: start; }
+      .index ol { box-shadow: inset 0 1px 0 var(--ink); }
+      .index li a {
+        display: grid; grid-template-columns: 30px 1fr; height: 30px; align-items: center;
+        text-decoration: none; color: var(--ink2); box-shadow: inset 0 -1px 0 var(--hair);
+        transition: color var(--snap) var(--ease);
+      }
+      .index li a:hover { color: var(--ink); }
+    }
+
+    ol.steps { counter-reset: step; }
+    ol.steps > li {
+      counter-increment: step;
+      display: grid; grid-template-columns: 45px minmax(0, 1fr); gap: 0 15px;
+      padding: 15px 0 var(--gap-section);
+      box-shadow: inset 0 1px 0 var(--ink);
+      scroll-margin-top: 60px;
+    }
+    @media (min-width: 720px) { ol.steps > li { grid-template-columns: 90px minmax(0, 1fr); } }
+    @media (max-width: 719px) {
+      ol.steps > li { grid-template-columns: minmax(0, 1fr); }
+      ol.steps > li::before { margin-bottom: 15px; }
+      pre.plate { font-size: 11px; line-height: 15px; }
+    }
+    ol.steps > li::before {
+      content: counter(step, decimal-leading-zero);
+      font-family: var(--face-truth); font-size: 30px; line-height: 30px; letter-spacing: -0.03em;
+      font-feature-settings: "tnum" 1, "lnum" 1;
+    }
+    .step-body { min-width: 0; max-width: 640px; }
+    .step-body h3 {
+      font-family: var(--face-truth); font-weight: 400;
+      font-size: 20px; line-height: 25px; letter-spacing: -0.015em;
+      margin: 2.5px 0 15px;
+    }
+    .step-body > p + p, .step-body > p + ul, .step-body > ul + p { margin-top: 15px; }
+    .step-body > * + .callout, .step-body > * + .floor, .step-body > * + pre.plate { margin-top: 15px; }
+    .step-body .tick li { position: relative; padding-left: 25px; }
+    .step-body .tick li + li { margin-top: 10px; }
+    .step-body .tick li::before {
+      content: ""; position: absolute; left: 0; top: 10px; width: 15px; height: 1px; background: var(--ink);
+    }
+    .path { white-space: nowrap; }
+
+    /* ---------- callouts: plates, square ---------- */
+    .callout { background: var(--fill); padding: 15px; font-size: 13px; line-height: 20px; }
+    .callout .label { display: block; margin-bottom: 5px; color: var(--ink); }
+    .callout.warn { background: transparent; box-shadow: inset 0 0 0 1px var(--ink); }
+    .callout.danger {
+      position: relative; background: transparent;
+      box-shadow: inset 0 0 0 1px var(--red);
+      padding-left: 40px;
+    }
+    .callout.danger::before {
+      content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 25px;
+      background: repeating-linear-gradient(-45deg, var(--red) 0 1px, transparent 1px 4px);
+    }
+    .callout.danger .label { color: var(--red); }
+
+    /* ---------- the floor: ink rises to hold actions; the paper's edge rounds into it ---------- */
+    .floor {
+      position: relative; background: var(--paper); color: var(--ink);
+      padding: 15px;
+      margin-top: var(--page-corner);
+    }
+    .floor::before {
+      content: ""; position: absolute; left: 0; right: 0; bottom: 100%; height: var(--page-corner);
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 100% 0, transparent calc(var(--page-corner) - 0.5px), var(--paper) var(--page-corner)) left bottom / var(--page-corner) var(--page-corner) no-repeat,
+        radial-gradient(circle at 0 0, transparent calc(var(--page-corner) - 0.5px), var(--paper) var(--page-corner)) right bottom / var(--page-corner) var(--page-corner) no-repeat;
+    }
+    .floor .row + .ledger, .floor .ledger + .row { margin-top: 15px; }
+    .floor .ledger { box-shadow: none; }
+    .floor .ledger > div:last-child { box-shadow: none; }
+    /* inside the reading column the floor is a held block: round, as what it holds is touched */
+    .floor.inset { margin-top: 15px; border-radius: var(--page-corner); padding: 15px 15px 5px; }
+    .floor.inset::before { display: none; }
+    .floor.inset .ledger > div { grid-template-columns: 60px minmax(0, 1fr); }
+
+    /* ---------- prompt ---------- */
+    .prompt { position: relative; }
+    .prompt pre.plate { white-space: pre-wrap; overflow-wrap: anywhere; padding-top: 60px; margin-top: 0; }
+    .prompt .btn { position: absolute; top: 15px; right: 15px; }
+    .prompt .label.where { position: absolute; top: 22.5px; left: 15px; }
+
+    /* ---------- page foot: the floor ---------- */
+    footer.foot { margin-top: var(--gap-section); }
+    footer.foot .floor { padding: 30px 0 45px; }
+    .foot-grid { display: grid; gap: var(--gap-group); }
+    @media (min-width: 720px) { .foot-grid { grid-template-columns: 1fr auto; align-items: end; } }
+    .foot-links { display: flex; flex-wrap: wrap; gap: 10px 30px; }
+    .foot-note { margin-top: 30px; padding-top: 15px; box-shadow: inset 0 1px 0 var(--hair); }
+
+    @media (max-width: 400px) {
+      .row .btn { flex: 1 1 auto; }
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <a class="mark caps" href="#top">Telegram Agent Gateway</a>
+      <nav class="caps" aria-label="Page">
+        <a class="act wide" href="#steps">Steps</a>
+        <a class="act wide" href="#agent-prompt">Agent prompt</a>
+        <a class="act" href="https://github.com/Hemicart/telegram-agent-gateway" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="wrap">
+        <div class="tags">
+          <span class="caps">Open source</span>
+          <span class="label">Single-tenant</span>
+          <span class="label">You host, you pay</span>
+        </div>
+        <h1 class="display">Telegram<br />Agent Gateway</h1>
+        <div class="hero-grid">
+          <div>
+            <p class="lede">
+              A personal bridge between your Telegram account and your AI agent.
+              You deploy it on a host you control and pay for. Only chats you put in a
+              Telegram folder named <code>Agent</code> are visible to the agent. Your session
+              never leaves your instance.
+            </p>
+            <div class="row">
+              <a class="btn primary" href="#steps">Deploy your own</a>
+              <a class="btn" href="https://github.com/Hemicart/telegram-agent-gateway" rel="noopener">Source on GitHub</a>
+            </div>
+          </div>
+          <dl class="ledger">
+            <div><dt class="label">Access</dt><dd>Only the chats in your <code>Agent</code> folder</dd></div>
+            <div><dt class="label">Session</dt><dd>On your own volume at <code>/data</code></dd></div>
+            <div><dt class="label">Agent auth</dt><dd>A bearer token for <code>/v1</code>. Never your session or <code>api_hash</code></dd></div>
+            <div><dt class="label">Host</dt><dd>Render (recommended), Fly or your own server. Always-on plan with a persistent disk</dd></div>
+            <div><dt class="label">Revoke</dt><dd>Telegram → Settings → Devices, at any time</dd></div>
+          </dl>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" aria-labelledby="how">
+      <div class="wrap">
+        <div class="head"><span class="caps">How it works</span><span class="label">01</span></div>
+        <h2 class="subject" id="how">It logs in as you, and shows your agent only one folder.</h2>
+        <div class="facts">
+          <div>
+            <span class="label">Session</span>
+            <h3>MTProto as you, not a bot</h3>
+            <p>Uses a Telegram user session (Telethon), so it can read the DMs and groups you allow. The Bot API cannot do this for personal chats.</p>
+          </div>
+          <div>
+            <span class="label">Allowlist</span>
+            <h3>The folder is the allowlist</h3>
+            <p>Create a folder called <code>Agent</code> in Telegram and add chats. Remove a chat to revoke access. No bots to invite.</p>
+          </div>
+          <div>
+            <span class="label">Agent</span>
+            <h3>Your agent gets an API token</h3>
+            <p>Your AI calls <code>/v1</code> with a bearer token. It never receives your Telegram session or <code>api_hash</code>.</p>
+          </div>
+          <div>
+            <span class="label">Host</span>
+            <h3>You are the host</h3>
+            <p>No company fleet, no shared multi-tenant box. Your session lives only on the instance you deployed. Nothing runs on anyone else’s servers.</p>
+          </div>
+        </div>
+        <pre class="plate" role="img" aria-label="Telegram connects over MTProto to your gateway, which stores the session on your /data volume and serves this page, the /setup wizard and the /v1 agent API.">Telegram (you)
+   ↕  MTProto session on YOUR volume (/data)
+Your gateway (Render / Fly / your server)
+   ├── this page + /setup wizard
+   └── /v1 agent API  ←  your AI agent (token)</pre>
+      </div>
+    </section>
+
+    <section class="block" id="steps" aria-labelledby="setup">
+      <div class="wrap">
+        <div class="head"><span class="caps">Setup</span><span class="label">02</span></div>
+        <h2 class="subject" id="setup">Deploy first. Your server walks you through the rest.</h2>
+        <div class="steps-layout">
+          <nav class="index" aria-label="Steps">
+            <ol class="caps">
+              <li><a href="#s1"><span>01</span><span>Fork</span></a></li>
+              <li><a href="#s2"><span>02</span><span>Deploy</span></a></li>
+              <li><a href="#s3"><span>03</span><span>Open your server</span></a></li>
+            </ol>
+          </nav>
+
+          <ol class="steps">
+            <li id="s1">
+              <div class="step-body">
+                <h3>Copy it to your GitHub</h3>
+                <p>
+                  Log in to GitHub (free account at <a class="act" href="https://github.com/signup" rel="noopener">github.com/signup</a>),
+                  open <a class="act" href="https://github.com/Hemicart/telegram-agent-gateway" rel="noopener">telegram-agent-gateway</a>
+                  and click <span class="path">Fork → Create fork</span>.
+                  Your server runs from your copy, so nobody else can change it.
+                </p>
+              </div>
+            </li>
+
+            <li id="s2">
+              <div class="step-body" id="deploy">
+                <h3>Deploy it. You pay the platform.</h3>
+                <p>
+                  We recommend <strong>Render</strong>: sign in at dashboard.render.com with <strong>GitHub</strong>, pick your copy, and it reads the
+                  repo’s <code>render.yaml</code>, so the disk and health check are set up for you.
+                  Or hand it to your coding agent with the <a class="act" href="#agent-prompt">prompt below</a>.
+                </p>
+                <ul class="tick">
+                  <li>On Render choose <span class="path">New → Blueprint</span>, not “New Web Service” (that one skips the disk).</li>
+                  <li>Give Render’s GitHub app access to <strong>only</strong> your copy.</li>
+                  <li>If the <span class="path">Blueprint Path</span> box is empty, click it and choose <code>render.yaml</code>.</li>
+                  <li>Click <span class="path">Deploy Blueprint</span> and wait for <strong>Live</strong> (3–5 minutes).</li>
+                </ul>
+                <div class="floor inset">
+                  <div class="row">
+                    <a class="btn primary" href="https://render.com/deploy?repo=https://github.com/Hemicart/telegram-agent-gateway" rel="noopener">Deploy to Render</a>
+                    <a class="btn" href="https://github.com/Hemicart/telegram-agent-gateway/blob/main/docs/SELF-HOST.md" rel="noopener">Fly / VPS / Docker guide</a>
+                  </div>
+                  <dl class="ledger">
+                    <div><dt class="label">Needs</dt><dd>An always-on plan and a persistent disk mounted at <code>/data</code>. Without the disk you lose the Telegram login on every restart.</dd></div>
+                    <div><dt class="label">Cost</dt><dd>Render: Starter plan about $7 a month plus about $0.25 for the 1 GB disk. The free plan has no disk.</dd></div>
+                  </dl>
+                </div>
+                <div class="callout danger">
+                  <span class="label">Run exactly one instance</span>
+                  No replicas, no scaling, no zero-downtime deploys. Two copies on one login make Telegram
+                  end it, and you have to log in again. On Fly, launch with <code>--ha=false</code>.
+                </div>
+              </div>
+            </li>
+
+            <li id="s3">
+              <div class="step-body">
+                <h3>Open your server’s address</h3>
+                <p>
+                  Open the <strong>https://</strong> address your host gives you, e.g. <code>https://your-app.onrender.com</code>. On Render it’s at the top of the service page.
+                  Never a bare IP or <code>http://</code> address: the server refuses to run setup without HTTPS.
+                  It opens a setup page that takes you through everything, one screen at a time:
+                </p>
+                <ul class="tick">
+                  <li><strong>Start.</strong> Press Start. Your browser becomes the owner, and setup closes to everyone else. Do this right after the deploy finishes.</li>
+                  <li><strong>Telegram keys.</strong> It sends you to my.telegram.org, shows exactly where to click, and you paste <code>api_id</code> and <code>api_hash</code>.</li>
+                  <li><strong>Log in.</strong> Scan a QR code with the Telegram app. 2FA works.</li>
+                  <li><strong>Agent folder.</strong> Make a Telegram folder called <code>Agent</code> and add the chats your agent may read. The page checks it.</li>
+                  <li><strong>Connect your agent.</strong> You get a token and a ready-to-paste block for Claude, Grok or your own agent, plus a test button.</li>
+                </ul>
+                <p>Your keys and your Telegram login go straight to your server and stay there.</p>
+                <div class="callout warn">
+                  <span class="label">Emergency stop</span>
+                  Telegram → Settings → Devices → end the gateway’s session. Your agent loses access at once.
+                </div>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="agent-prompt" aria-labelledby="prompt-h">
+      <div class="wrap">
+        <div class="head"><span class="caps">With your agent</span><span class="label">03</span></div>
+        <h2 class="subject" id="prompt-h">Or let your agent walk you through it.</h2>
+        <p class="muted" style="max-width:640px;margin-bottom:15px">
+          Paste this into Claude, ChatGPT, Grok or any agent. It explains each click; you do the clicking.
+          Coding agents that should deploy to your own server: see <code>docs/AGENT_DEPLOY.md</code>.
+        </p>
+        <div class="prompt">
+          <span class="label where">Walk-me-through prompt</span>
+          <button class="btn chip primary" type="button" data-copy="prompt-text">Copy</button>
+          <pre class="plate" id="prompt-text">Help me set up Telegram Agent Gateway. Read the README at
+https://github.com/Hemicart/telegram-agent-gateway
+(the section "For AI agents helping someone set this up" is for you).
+
+Walk me through it one step at a time in plain, simple words: what to click, then wait for me
+to say done. I'm using Render and I'll sign in to everything with GitHub. Never ask me to paste
+my api_hash, Telegram codes or 2FA password into this chat; those go only into my server's own
+page. If I get stuck, ask me for a screenshot.</pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" aria-labelledby="not-h">
+      <div class="wrap">
+        <div class="head"><span class="caps">What this is not</span><span class="label">04</span></div>
+        <h2 class="subject" id="not-h">Not Telegram’s, and not a service.</h2>
+        <div class="facts">
+          <div>
+            <span class="label">Independent</span>
+            <h3>Not an official Telegram product</h3>
+            <p>An independent open-source gateway built on Telegram’s public Client API. Use at your own risk and follow Telegram’s API terms.</p>
+          </div>
+          <div>
+            <span class="label">Self-hosted</span>
+            <h3>Not a hosted SaaS for your DMs</h3>
+            <p>There is no central “sign up and we hold your session” service. This page only explains. Login happens on your own deploy.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="floor">
+      <div class="wrap">
+        <div class="foot-grid">
+          <div>
+            <p class="caps">Telegram Agent Gateway</p>
+            <p class="label">Open source · single-tenant · self-hosted</p>
+          </div>
+          <div class="row">
+            <a class="btn primary" href="https://github.com/Hemicart/telegram-agent-gateway" rel="noopener">Source on GitHub</a>
+            <a class="btn" href="#steps">Back to step 01</a>
+          </div>
+        </div>
+        <div class="foot-note">
+          <nav class="foot-links caps" aria-label="Footer">
+            <a class="act" href="https://github.com/Hemicart/telegram-agent-gateway">Source</a>
+            <a class="act" href="https://github.com/Hemicart/telegram-agent-gateway/blob/main/SECURITY.md">Security</a>
+            <a class="act" href="https://core.telegram.org/api/terms">Telegram API terms</a>
+          </nav>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      var buttons = document.querySelectorAll("[data-copy]");
+      Array.prototype.forEach.call(buttons, function (button) {
+        button.addEventListener("click", function () {
+          var source = document.getElementById(button.getAttribute("data-copy"));
+          if (!source) return;
+          var text = source.textContent;
+          var done = function (label) {
+            button.textContent = label;
+            window.setTimeout(function () { button.textContent = "Copy"; }, 2000);
+          };
+          var fallback = function () {
+            var range = document.createRange();
+            range.selectNodeContents(source);
+            var selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try { done(document.execCommand("copy") ? "Copied" : "Press Cmd+C"); }
+            catch (error) { done("Press Cmd+C"); }
+          };
+          if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(function () { done("Copied"); }, fallback);
+          } else {
+            fallback();
+          }
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

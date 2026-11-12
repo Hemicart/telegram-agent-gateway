@@ -1,0 +1,795 @@
+@import url("https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..700&family=Geist:wght@400;500&family=Geist+Mono:wght@400&family=Work+Sans:wght@400;500&display=swap");
+
+/*
+ * arcade.css — the /setup wizard in the Arcade "Essence" look (same as landing/index.html).
+ *
+ * Rules: 5px unit, 15px baseline. Paper (#FFF) is the reading surface, ink (#000) is the floor that
+ * holds actions. Round where you touch (pills, chips, the floor), square where you read (panels,
+ * plates, fields, code). Work Sans for labels and numbers, Archivo condensed caps for the one
+ * display word (h1), Geist for sentences, Geist Mono for code. Red is danger only.
+ * Dark mode inverts paper and ink (prefers-color-scheme). The QR box stays white in both.
+ *
+ * Classes and elements styled:
+ *   body, .page                     centered column, max 560px
+ *   header.top                      45px row: wordmark (any text/link) + a .pill
+ *   h1, h2, p.lede, .muted          display word / caps section head / standfirst / secondary text
+ *   .steps  (ol)                    progress rail; li.done, li.current, li (pending)
+ *   .panel, .panel h2               a reading section, ink rule on top
+ *   .field > label + input, .hint   text / password / number inputs, underlined
+ *   .btn, .btn.primary, .btn.ghost  pills (50px); default = outlined, primary = ink, ghost = quiet fill
+ *   button[disabled], .btn[disabled] the plate, label in ink2
+ *   .row                            horizontal group of buttons, wraps
+ *   .callout(.warn|.danger|.ok)     plates: note / outlined / red hatch / dot
+ *   .qr                             240px square, always white, holds <img> or <svg>
+ *   .secret                         mono token box + a .btn (copy) beside it
+ *   code, pre                       inline mono, mono plate
+ *   .chatlist (ul) li .title .kind  45px rows on hairlines
+ *   .pill(.ok|.warn|.err)           30px status chips
+ *   .floor                          ink bar at the foot of a .panel or the .page holding the primary action
+ */
+
+/* ---------------------------------------------------------------- tokens */
+:root {
+  --paper: #ffffff;
+  --ink: #000000;
+  --ink2: #707070; /* secondary text, 4.95:1 */
+  --ink3: #939393; /* pressed primary, large type only */
+  --hair: #e5e5e5;
+  --fill: #f2f2f2; /* plates */
+  --red: #e10600;  /* danger only */
+
+  --face-truth: "Work Sans", "Helvetica Neue", Arial, sans-serif;
+  --face-display: "Archivo", "Arial Narrow", sans-serif;
+  --face-explain: "Geist", "Helvetica Neue", Arial, sans-serif;
+  --face-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --u: 5px;
+  --line: 15px;
+  --margin: 15px;
+  --gap-group: 30px;
+  --gap-section: 45px;
+  --row: 45px;
+  --pill: 50px;
+  --chip: 30px;
+  --pill-gap: 5px;
+  --pair-gap: 10px;
+  --radius-round: 999px;
+  --page-corner: 30px;
+  --qr: 240px;
+  --snap: 120ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  color-scheme: light dark;
+}
+/* the other ground: what the floor carries */
+.floor {
+  --paper: #000000;
+  --ink: #ffffff;
+  --ink2: #8f8f8f;
+  --ink3: #5e5e5e;
+  --hair: #262626;
+  --fill: #141414;
+  --red: #ff3b2f;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #000000;
+    --ink: #ffffff;
+    --ink2: #8f8f8f;
+    --ink3: #5e5e5e;
+    --hair: #262626;
+    --fill: #141414;
+    --red: #ff3b2f;
+  }
+  .floor {
+    --paper: #ffffff;
+    --ink: #000000;
+    --ink2: #707070;
+    --ink3: #939393;
+    --hair: #e5e5e5;
+    --fill: #f2f2f2;
+    --red: #e10600;
+  }
+}
+
+/* ---------------------------------------------------------------- base */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html {
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--face-explain);
+  font-size: 15px;
+  line-height: 25px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: clip; /* the page floor runs edge to edge; clip, not hidden, so it stays sticky */
+}
+h1,
+h2,
+h3,
+p,
+ul,
+ol,
+pre {
+  margin: 0;
+  padding: 0;
+}
+p {
+  text-wrap: pretty;
+}
+a {
+  color: inherit;
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+a:hover {
+  color: var(--ink2);
+}
+:focus-visible {
+  outline: 1px solid var(--ink);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+  }
+}
+
+.page {
+  width: 100%;
+  max-width: calc(560px + 2 * var(--margin));
+  margin: 0 auto;
+  padding: 0 var(--margin) var(--gap-section);
+}
+
+/* ---------------------------------------------------------------- header row: 45 */
+header.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  height: var(--row);
+  margin-bottom: var(--gap-group);
+  box-shadow: inset 0 -1px 0 var(--hair);
+  font-family: var(--face-truth);
+  font-size: 11px;
+  line-height: 15px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+header.top > :first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-decoration: none;
+}
+
+/* ---------------------------------------------------------------- type */
+h1 {
+  font-family: var(--face-display);
+  font-weight: 600;
+  font-stretch: 72%;
+  font-variation-settings: "wdth" 72;
+  font-size: 45px;
+  line-height: 40px;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  margin: 0 0 var(--line) -0.029em;
+  overflow-wrap: anywhere;
+}
+h2 {
+  font-family: var(--face-truth);
+  font-weight: 400;
+  font-size: 11px;
+  line-height: 15px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: var(--line);
+}
+p.lede {
+  font-size: 20px;
+  line-height: 25px;
+  letter-spacing: -0.01em;
+  margin-bottom: var(--gap-group);
+}
+p + p {
+  margin-top: var(--line);
+}
+.muted {
+  color: var(--ink2);
+}
+.hint,
+small {
+  font-size: 13px;
+  line-height: 20px;
+}
+
+/* ---------------------------------------------------------------- progress rail */
+.steps {
+  list-style: none;
+  counter-reset: step;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+  gap: 0 var(--u);
+  margin: 0 0 var(--gap-section);
+  font-family: var(--face-truth);
+  font-size: 11px;
+  line-height: 15px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.steps li {
+  counter-increment: step;
+  min-width: 0;
+  padding-top: 10px;
+  box-shadow: inset 0 1px 0 var(--hair);
+  color: var(--ink2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.steps li::before {
+  content: counter(step, decimal-leading-zero);
+  display: block;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+.steps li.done {
+  box-shadow: inset 0 1px 0 var(--ink);
+}
+.steps li.current {
+  box-shadow: inset 0 1px 0 var(--ink);
+  color: var(--ink);
+}
+.steps li.current::before {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+
+/* ---------------------------------------------------------------- panel: a reading section */
+.panel {
+  position: relative;
+  background: var(--paper);
+  padding: var(--line) 0 var(--gap-group);
+  box-shadow: inset 0 1px 0 var(--ink);
+}
+.panel + .panel {
+  margin-top: var(--line);
+}
+.panel h2 {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: var(--gap-group);
+}
+.panel > * + .field,
+.panel > * + .row,
+.panel > * + .callout,
+.panel > * + .qr,
+.panel > * + .secret,
+.panel > * + .chatlist,
+.panel > * + pre {
+  margin-top: var(--gap-group);
+}
+.panel > * + p {
+  margin-top: var(--line);
+}
+.panel > h2 + * {
+  margin-top: 0 !important;
+}
+.panel > .field + .field {
+  margin-top: var(--line);
+}
+
+/* ---------------------------------------------------------------- fields: square, underlined */
+.field {
+  display: grid;
+  min-width: 0;
+}
+.field label {
+  font-family: var(--face-truth);
+  font-size: 11px;
+  line-height: 15px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink2);
+}
+.field input {
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  margin: 0;
+  padding: var(--u) 0 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--face-truth);
+  font-size: 15px;
+  line-height: 20px;
+  letter-spacing: -0.01em;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  box-shadow: inset 0 -1px 0 var(--ink);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.field input::placeholder {
+  color: var(--ink2);
+  opacity: 1;
+}
+.field input:focus-visible {
+  outline: 1px solid var(--ink);
+  outline-offset: 2px;
+}
+.field input[aria-invalid="true"] {
+  box-shadow: inset 0 -1px 0 var(--red);
+}
+.field input:disabled {
+  color: var(--ink2);
+  box-shadow: inset 0 -1px 0 var(--hair);
+}
+.field input[type="number"]::-webkit-inner-spin-button,
+.field input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.field input[type="number"] {
+  -moz-appearance: textfield;
+}
+.field .hint {
+  margin-top: var(--u);
+  color: var(--ink2);
+  font-family: var(--face-explain);
+}
+
+/* ---------------------------------------------------------------- pills */
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: var(--pill);
+  min-width: 0;
+  margin: 0;
+  padding: 0 var(--margin);
+  border: 0;
+  border-radius: var(--radius-round);
+  background: transparent;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--ink);
+  font-family: var(--face-truth);
+  font-size: 11px;
+  line-height: 15px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--snap) var(--ease), color var(--snap) var(--ease);
+}
+.btn:hover {
+  color: var(--ink);
+}
+.btn.primary {
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: none;
+}
+.btn.ghost {
+  background: var(--fill);
+  box-shadow: none;
+}
+/* pressed: one tone down, arrives at once */
+.btn:active {
+  transition-duration: 0ms;
+  background: var(--fill);
+}
+.btn.primary:active {
+  background: var(--ink3);
+}
+.btn.ghost:active {
+  background: var(--hair);
+}
+/* disabled: the plate, the words in ink2 */
+button[disabled],
+.btn[disabled],
+.btn[aria-disabled="true"] {
+  background: var(--fill) !important;
+  color: var(--ink2) !important;
+  box-shadow: none !important;
+  cursor: default;
+  pointer-events: none;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pill-gap);
+}
+@media (max-width: 420px) {
+  .row > .btn {
+    flex: 1 1 auto;
+  }
+}
+
+/* ---------------------------------------------------------------- callouts: plates */
+.callout {
+  position: relative;
+  padding: var(--line);
+  background: var(--fill);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 20px;
+}
+.callout strong:first-child {
+  display: block;
+  margin-bottom: var(--u);
+  font-family: var(--face-truth);
+  font-weight: 400;
+  font-size: 11px;
+  line-height: 15px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.callout.warn {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--ink);
+}
+.callout.danger {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--red);
+  padding-left: 40px;
+}
+.callout.danger::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 25px;
+  background: repeating-linear-gradient(-45deg, var(--red) 0 1px, transparent 1px 4px);
+}
+.callout.danger strong:first-child {
+  color: var(--red);
+}
+.callout.ok {
+  padding-left: 35px;
+}
+.callout.ok::before {
+  content: "";
+  position: absolute;
+  left: var(--line);
+  top: 22.5px;
+  width: var(--u);
+  height: var(--u);
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+/* ---------------------------------------------------------------- QR: always white so it scans */
+.qr {
+  width: var(--qr);
+  max-width: 100%;
+  aspect-ratio: 1 / 1;
+  padding: var(--line);
+  background: #ffffff;
+  color: #000000;
+  box-shadow: inset 0 0 0 1px #e5e5e5;
+  display: grid;
+  place-items: center;
+}
+.qr img,
+.qr svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+/* ---------------------------------------------------------------- secret: shown once */
+.secret {
+  display: flex;
+  align-items: stretch;
+  gap: var(--pill-gap);
+  min-width: 0;
+}
+.secret > code,
+.secret > pre,
+.secret > .value,
+.secret > input {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  min-height: var(--pill);
+  margin: 0;
+  padding: var(--u) var(--line);
+  border: 0;
+  border-radius: 0;
+  background: var(--fill);
+  color: var(--ink);
+  font-family: var(--face-mono);
+  font-size: 13px;
+  line-height: 20px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+  user-select: all;
+}
+.secret > .btn {
+  flex: none;
+  align-self: center;
+}
+@media (max-width: 420px) {
+  .secret {
+    flex-direction: column;
+  }
+  .secret > .btn {
+    align-self: stretch;
+  }
+}
+
+/* ---------------------------------------------------------------- code */
+code {
+  font-family: var(--face-mono);
+  font-size: 0.87em;
+  background: var(--fill);
+  padding: 1px 4px;
+  overflow-wrap: anywhere;
+}
+pre {
+  font-family: var(--face-mono);
+  font-size: 13px;
+  line-height: 20px;
+  background: var(--fill);
+  color: var(--ink);
+  padding: var(--line);
+  overflow-x: auto;
+  white-space: pre;
+}
+pre code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* ---------------------------------------------------------------- chat list: rows of 45 */
+.chatlist {
+  list-style: none;
+  box-shadow: inset 0 1px 0 var(--ink);
+}
+.chatlist li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  min-height: var(--row);
+  padding: 12.5px 0;
+  box-shadow: inset 0 -1px 0 var(--hair);
+}
+.chatlist .title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--face-truth);
+  font-size: 15px;
+  line-height: 20px;
+  letter-spacing: -0.01em;
+}
+.chatlist .kind {
+  flex: none;
+  color: var(--ink2);
+  font-family: var(--face-truth);
+  font-size: 11px;
+  line-height: 15px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ---------------------------------------------------------------- status chips: 30 */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: var(--chip);
+  padding: 0 10px;
+  border-radius: var(--radius-round);
+  background: var(--fill);
+  color: var(--ink);
+  font-family: var(--face-truth);
+  font-size: 11px;
+  line-height: 15px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex: none;
+}
+.pill::before {
+  content: "";
+  width: var(--u);
+  height: var(--u);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+.pill.ok::before {
+  background: currentColor;
+}
+.pill.warn {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--ink);
+}
+.pill.err {
+  background: transparent;
+  color: var(--red);
+  box-shadow: inset 0 0 0 1px var(--red);
+}
+.pill.err::before {
+  background: currentColor;
+}
+
+/* ---------------------------------------------------------------- the floor
+   Ink rises to hold the act. The paper's edge rounds into it (30) where the floor spans its
+   container; its contents take the other ground, so a .btn.primary on it is a white pill. */
+.floor {
+  position: relative;
+  margin-top: calc(var(--page-corner) + var(--line));
+  padding: 10px var(--line) var(--line);
+  background: var(--paper);
+  color: var(--ink);
+}
+.floor::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: var(--page-corner);
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 100% 0, transparent calc(var(--page-corner) - 0.5px), var(--paper) var(--page-corner)) left bottom / var(--page-corner) var(--page-corner) no-repeat,
+    radial-gradient(circle at 0 0, transparent calc(var(--page-corner) - 0.5px), var(--paper) var(--page-corner)) right bottom / var(--page-corner) var(--page-corner) no-repeat;
+}
+.floor > .btn,
+.floor > .row > .btn.primary:only-child {
+  width: 100%;
+}
+.floor > .muted,
+.floor > p {
+  font-size: 13px;
+  line-height: 20px;
+  margin-bottom: 10px;
+}
+.floor > .row {
+  justify-content: flex-end;
+}
+/* inside a panel: a held block, round, as what it holds is touched (the paper's notched edge is
+   kept for the page floor, which spans the viewport) */
+.panel > .floor {
+  margin-top: var(--gap-group);
+  padding: 10px;
+  border-radius: var(--page-corner);
+}
+.panel > .floor::before {
+  display: none;
+}
+.panel > .floor:last-child {
+  margin-bottom: calc(-1 * var(--line));
+}
+/* at the foot of the page: it stays under the thumb */
+.page > .floor:last-child {
+  position: sticky;
+  bottom: 0;
+  /* edge to edge across the viewport; its contents stay on the page's column */
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  margin-bottom: calc(-1 * var(--gap-section));
+  padding: 10px max(var(--margin), calc(50vw - 280px)) calc(var(--line) + env(safe-area-inset-bottom, 0px));
+  z-index: 1;
+}
+
+/* wizard: breathing room between a panel's intro sentence and what follows */
+.panel > p + form,
+.panel > p + div,
+.panel > p + ul,
+.panel > div + ul {
+  margin-top: var(--line);
+}
+
+/* wizard inputs: a visible box, so nobody has to guess where to type */
+.field input {
+  height: 50px;
+  padding: 0 15px;
+  background: var(--fill);
+  border: 1px solid var(--ink2);
+  border-radius: 0;
+  color: var(--ink);
+  font-size: 16px;
+}
+.field input::placeholder { color: var(--ink2); opacity: 1; }
+.field input:focus { border-color: var(--ink); outline: 2px solid var(--ink); outline-offset: 0; }
+.field label { display: block; margin-bottom: 5px; }
+
+/* wizard: numbered how-to list inside a panel */
+.howto {
+  list-style: none;
+  counter-reset: howto;
+  margin: var(--line) 0;
+  padding: 0;
+}
+.howto > li {
+  counter-increment: howto;
+  position: relative;
+  padding: 10px 0 10px 40px;
+  border-top: 1px solid var(--hair);
+  font-size: 15px;
+  line-height: 22px;
+}
+.howto > li:last-child { border-bottom: 1px solid var(--hair); }
+.howto > li::before {
+  content: counter(howto, decimal-leading-zero);
+  position: absolute;
+  left: 0;
+  top: 12px;
+  font-family: "Work Sans", system-ui, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--ink2);
+}
+.panel > form,
+.panel > .callout,
+.panel > #folder-status,
+.panel > #token-area,
+.panel > #agent-block,
+#agent-block > .row,
+#test-result { margin-top: var(--line); }
+#agent-prompt { white-space: pre-wrap; word-break: break-word; }
+
+/* wizard: the fallback sign-in disclosure */
+details.muted { margin-top: 30px; }
+details.muted summary { cursor: pointer; font-size: 13px; }
+details.muted form { margin-top: 15px; }
+
+/* the hidden attribute always wins over component display rules */
+[hidden] { display: none !important; }
+
+/* wizard: inside a panel the floor is just the action row. The rounded "paper meets ink"
+   band reads as a broken box at this width, so drop it. */
+.panel .floor {
+  margin-top: 30px;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  border-radius: 0;
+  /* keep the page's colours: the floor's inverted palette made ghost buttons light-on-light */
+  --paper: inherit;
+  --ink: inherit;
+  --ink2: inherit;
+  --ink3: inherit;
+  --hair: inherit;
+  --fill: inherit;
+  --red: inherit;
+}
+.panel .floor .btn.ghost { border: 1px solid var(--ink2); }
+.panel .floor .btn[disabled] { opacity: 0.35; }
+.panel .floor::before,
+.panel .floor::after { content: none; display: none; }
+.panel .floor .btn.primary { width: 100%; }
+.panel .floor.row .btn.primary { width: auto; flex: 1 1 auto; }

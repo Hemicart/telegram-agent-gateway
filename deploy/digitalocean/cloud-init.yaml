@@ -1,0 +1,12 @@
+#cloud-config
+# Paste into DigitalOcean → Create Droplet → Advanced Options → "Add Initialization scripts".
+# Change REPO_URL to YOUR fork. The droplet installs Docker, the gateway and Caddy (HTTPS) by itself;
+# after ~3 minutes open https://<droplet-ip>.sslip.io and press Start.
+package_update: true
+packages:
+  - git
+  - curl
+runcmd:
+  - export REPO_URL="https://github.com/YOUR_GITHUB_USER/telegram-agent-gateway.git"
+  - git clone --depth 1 "$REPO_URL" /opt/telegram-agent-gateway || true
+  - REPO_URL="$REPO_URL" sh /opt/telegram-agent-gateway/deploy/digitalocean/setup.sh || echo "setup.sh not found yet" >> /var/log/telegram-agent-gateway-setup.log

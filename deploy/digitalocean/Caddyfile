@@ -1,0 +1,4 @@
+# Caddy redirects http -> https and sends X-Forwarded-Proto: https to the gateway.
+{$DOMAIN} {
+	reverse_proxy gateway:8080
+}

@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Gateway Setup</title>
+  <link rel="stylesheet" href="/static/arcade.css">
+</head>
+<body>
+  <div class="page">
+    <header class="top">
+      <span class="wordmark">Telegram Agent Gateway</span>
+      <span id="conn" class="pill">Setup</span>
+    </header>
+
+    <ol class="steps" id="rail">
+      <li data-step="password">Start</li>
+      <li data-step="credentials">Keys</li>
+      <li data-step="login">Log in</li>
+      <li data-step="folder">Folder</li>
+      <li data-step="connect">Agent</li>
+      <li data-step="done">Done</li>
+    </ol>
+
+    <div id="flash"></div>
+
+    <!-- 1. start / claim -->
+    <section class="panel" data-screen="password" hidden>
+      <div id="claim-new">
+        <h2>Your server is live</h2>
+        <p class="lede">This page sets it up in about ten minutes. Everything you enter stays on this server.</p>
+        <p class="muted">Press <strong>Start</strong> to make this server yours. This browser becomes its owner, and nobody else can open setup after that.</p>
+        <form id="f-claim">
+          <div class="field" id="claim-pw-field" hidden><label for="claim-pw">Setup password</label><input id="claim-pw" type="password" autocomplete="current-password" placeholder="The SETUP_PASSWORD you set on your host"></div>
+          <div class="floor"><button class="btn primary" type="submit">Start</button></div>
+        </form>
+      </div>
+      <div id="claim-taken" hidden>
+        <h2>Sign in as the owner</h2>
+        <p class="muted">This server is already set up. If it’s yours, sign in with the same Telegram <strong>api_id</strong> and <strong>api_hash</strong> you entered during setup. Forgot them? They’re at <a href="https://my.telegram.org" target="_blank" rel="noopener">my.telegram.org</a> → API development tools.</p>
+        <form id="f-apilogin">
+          <div class="field"><label for="login-api-id">App api_id</label><input id="login-api-id" inputmode="numeric" autocomplete="off" placeholder="A number, e.g. 1234567" required></div>
+          <div class="field"><label for="login-api-hash">App api_hash</label><input id="login-api-hash" type="password" autocomplete="off" placeholder="32 letters and numbers" required></div>
+          <div class="floor"><button class="btn primary" type="submit">Sign in</button></div>
+        </form>
+        <details class="muted">
+          <summary>Use the setup password instead (if your host set one)</summary>
+          <form id="f-password">
+            <div class="field"><label for="pw">Setup password</label><input id="pw" type="password" autocomplete="current-password" placeholder="Paste it here" required></div>
+            <div class="floor"><button class="btn" type="submit">Sign in</button></div>
+          </form>
+        </details>
+      </div>
+    </section>
+
+    <!-- 2. telegram api keys -->
+    <section class="panel" data-screen="credentials" hidden>
+      <h2>Get your Telegram keys</h2>
+      <p class="muted">Telegram gives every person their own API keys for apps like this one. It takes two minutes.</p>
+      <ol class="howto">
+        <li>Open <a href="https://my.telegram.org" target="_blank" rel="noopener">my.telegram.org</a> in a new tab.</li>
+        <li>Enter your phone number in international format, e.g. <code>+44 7700 900123</code>.</li>
+        <li>Telegram sends a code <strong>inside the Telegram app</strong> (not SMS). Type it on the site.</li>
+        <li>Click <strong>API development tools</strong>.</li>
+        <li>Fill the form. Any values work: App title <code>Agent Gateway</code>, Short name <code>agentgw</code>, Platform <strong>Other</strong>. Click <strong>Create application</strong>.</li>
+        <li>Copy <strong>App api_id</strong> and <strong>App api_hash</strong> into the boxes below.</li>
+      </ol>
+      <div class="callout warn">If the site just says “ERROR”, turn off any VPN and try another browser. It’s a known Telegram quirk.</div>
+      <form id="f-credentials">
+        <div class="field"><label for="api_id">App api_id</label><input id="api_id" inputmode="numeric" autocomplete="off" placeholder="A number, e.g. 1234567" required></div>
+        <div class="field"><label for="api_hash">App api_hash</label><input id="api_hash" type="password" autocomplete="off" placeholder="32 letters and numbers" required><span class="hint">Treat it like a password. It’s stored only on this server’s disk.</span></div>
+        <div class="floor"><button class="btn primary" type="submit">Next</button></div>
+      </form>
+    </section>
+
+    <!-- 3. login -->
+    <section class="panel" data-screen="login" hidden>
+      <h2>Log in to Telegram</h2>
+      <div id="qr-block">
+        <ol class="howto">
+          <li>On your phone, open Telegram → <strong>Settings</strong> → <strong>Devices</strong>.</li>
+          <li>Tap <strong>Link Desktop Device</strong>.</li>
+          <li>Point the camera at this code.</li>
+        </ol>
+        <div class="qr" id="qr"><span class="muted">Generating…</span></div>
+        <p class="muted" id="qr-note">The code refreshes by itself. If you use a 2FA password, you’ll be asked for it next.</p>
+        <div class="row"><button class="btn ghost" id="qr-retry" type="button" hidden>New code</button><button class="btn ghost" id="to-phone" type="button">Log in with phone number instead</button></div>
+      </div>
+      <form id="f-phone" hidden>
+        <div class="field"><label for="phone">Phone number</label><input id="phone" type="tel" placeholder="+447700900123" autocomplete="tel"></div>
+        <div class="row"><button class="btn primary" type="submit">Send code</button><button class="btn ghost" id="to-qr" type="button">Back to QR code</button></div>
+      </form>
+      <form id="f-code" hidden>
+        <div class="field"><label for="code">Login code</label><input id="code" inputmode="numeric" autocomplete="one-time-code" placeholder="The code from the Telegram app"><span class="hint">It arrives in the Telegram app on your other devices first.</span></div>
+        <div class="floor"><button class="btn primary" type="submit">Log in</button></div>
+      </form>
+      <form id="f-2fa" hidden>
+        <div class="callout">Your account has a 2FA password. Enter it to finish logging in.</div>
+        <div class="field"><label for="twofa">2FA password</label><input id="twofa" type="password" autocomplete="current-password" placeholder="Your Telegram 2FA password"><span class="hint" id="twofa-hint"></span><span class="hint">This is the cloud password you set in Telegram (Settings → Privacy and Security → Two-Step Verification), not the login code. A few wrong tries lock attempts for up to an hour.</span></div>
+        <div class="floor"><button class="btn primary" type="submit">Finish login</button></div>
+      </form>
+    </section>
+
+    <!-- 4. folder -->
+    <section class="panel" data-screen="folder" hidden>
+      <h2>Choose what the agent can read</h2>
+      <p class="muted">The agent sees only chats in one Telegram folder. Everything else stays invisible to it.</p>
+      <ol class="howto">
+        <li>In Telegram, open <strong>Settings</strong> → <strong>Folders</strong> (Chat Folders) → <strong>Create New Folder</strong>.</li>
+        <li>Name it exactly <code id="want-title">Agent</code>.</li>
+        <li>Tap <strong>Add Chats</strong> and pick the chats one by one.</li>
+        <li>Pick <strong>individual chats only</strong>. The Add Chats window also has a <strong>Chat types</strong> section at the top (Contacts, Non-Contacts, Groups, Channels, Bots). Leave those unticked: each one would let in every chat of that kind, so the server refuses them.</li>
+        <li>Save, then press <strong>Check folder</strong> below.</li>
+      </ol>
+      <div id="folder-status"></div>
+      <ul class="chatlist" id="chats"></ul>
+      <div class="floor row">
+        <button class="btn ghost" id="folder-refresh" type="button">Check folder</button>
+        <button class="btn ghost" id="folder-confirm" type="button" hidden>Use this folder</button>
+        <button class="btn primary" id="folder-next" type="button" disabled>These are right</button>
+      </div>
+    </section>
+
+    <!-- 5. connect agent -->
+    <section class="panel" data-screen="connect" hidden>
+      <h2>Connect your agent</h2>
+      <p class="muted">Your agent gets a web address and a secret token. It never sees your Telegram login.</p>
+      <ol class="howto">
+        <li>Press <strong>Create token</strong>. It’s shown <strong>once</strong>, so copy the block below before leaving this page.</li>
+        <li>Paste the block into your agent: Claude project instructions, a Grok/ChatGPT custom instruction, or your own agent’s system prompt. For code, put the URL and token in its secrets as <code>GATEWAY_URL</code> and <code>GATEWAY_TOKEN</code>.</li>
+        <li>Press <strong>Test</strong> to check that the token works.</li>
+      </ol>
+      <div id="token-area" class="row"><button class="btn primary" id="token-issue" type="button">Create token</button></div>
+      <div id="agent-block" hidden>
+        <pre id="agent-prompt"></pre>
+        <div class="row">
+          <button class="btn primary" id="copy-prompt" type="button">Copy for my agent</button>
+          <button class="btn" id="test-token" type="button">Test</button>
+        </div>
+        <div id="test-result"></div>
+      </div>
+      <div id="token-env" hidden class="callout ok">The token comes from the <code>AGENT_API_TOKEN</code> environment variable. Give your agent that token and the address <code id="base-url-env"></code>.</div>
+      <div class="floor"><button class="btn primary" id="finish" type="button" disabled>Finish setup</button></div>
+    </section>
+
+    <!-- 6. done -->
+    <section class="panel" data-screen="done" hidden>
+      <h2>All set</h2>
+      <p class="muted">Your agent can read the chats in the folder. To give it a new chat, add it to the folder; to take one away, remove it. Changes apply within seconds.</p>
+      <div id="done-folder"></div>
+      <div class="callout"><strong>Emergency stop:</strong> Telegram → Settings → Devices → end this server’s session. The agent loses access at once.</div>
+      <div class="callout">
+        <strong>Managing it later:</strong> this browser stays signed in. From any other browser, open this page and sign in with your Telegram <strong>api_id</strong> and <strong>api_hash</strong> (look them up again at my.telegram.org any time). Keep the api_hash private: whoever has it can manage this server.
+      </div>
+      <p class="muted">Setup is locked. <strong>New token</strong> replaces your agent’s token (the old one stops working). <strong>Re-check folder</strong> walks you through the folder and agent steps again, e.g. after renaming the folder. <strong>Sign out other browsers</strong> ends every sign-in except this one. Your agent keeps working throughout.</p>
+      <div class="floor row">
+        <button class="btn ghost" id="rotate" type="button">New token</button>
+        <button class="btn ghost" id="unlock" type="button">Re-check folder</button>
+        <button class="btn ghost" id="sign-out-others" type="button">Sign out other browsers</button>
+      </div>
+      <div id="rotate-area"></div>
+    </section>
+  </div>
+  <script src="/static/setup.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["src", "tests"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+# user-facing copy (HTML page, error sentences) reads better unwrapped
+"src/gateway/transport.py" = ["E501"]
+"src/gateway/setup_routes.py" = ["E501"]

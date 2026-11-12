@@ -1,0 +1,30 @@
+# Droplet stack: the gateway behind Caddy, which gets a Let's Encrypt certificate by itself.
+# DOMAIN defaults to <droplet-ip>.sslip.io (free, no DNS setup). Set your own in .env if you have one.
+services:
+  gateway:
+    build: ../..
+    environment:
+      SETUP_PASSWORD: ${SETUP_PASSWORD:-}
+    volumes:
+      - tgdata:/data
+    expose:
+      - "8080"
+    restart: unless-stopped
+  caddy:
+    image: caddy:2.8
+    depends_on:
+      - gateway
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+volumes:
+  tgdata:
+  caddy_data:
+  caddy_config:

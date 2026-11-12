@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: telegram-agent-gateway
+    runtime: docker
+    plan: starter            # paid: required for a persistent disk
+    region: frankfurt
+    healthCheckPath: /health
+    autoDeployTrigger: commit # your fork redeploys when you push to it; upstream never reaches it unless you sync
+    numInstances: 1          # never scale: two copies revoke the Telegram session
+    disk:
+      name: tgdata
+      mountPath: /data
+      sizeGB: 1

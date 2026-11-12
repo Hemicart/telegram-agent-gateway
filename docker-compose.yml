@@ -1,0 +1,17 @@
+# Local / NAS. Exposes plain HTTP on 8080: setup only works from localhost unless you put an
+# HTTPS proxy (e.g. Caddy) with a real domain in front. Never run two copies on one volume.
+services:
+  gateway:
+    build: .
+    # Prefer a pinned release image once published:
+    # image: ghcr.io/YOUR_GITHUB_USER/telegram-agent-gateway@sha256:REPLACE_WITH_RELEASE_DIGEST
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - tgdata:/data
+    env_file:
+      - path: .env
+        required: false
+    restart: unless-stopped
+volumes:
+  tgdata:
